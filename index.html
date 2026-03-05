@@ -72,6 +72,64 @@
     opacity: 0; animation: fadeUp 0.5s 0.6s ease forwards;
   }
 
+  /* ── Crab Growth Card ── */
+  .growth-card {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 22px; padding: 22px 24px;
+    margin-bottom: 18px; text-align: center;
+    box-shadow: 0 2px 12px rgba(192,57,43,0.07);
+    opacity: 0; animation: fadeUp 0.5s 0.65s ease forwards;
+    position: relative; overflow: hidden;
+  }
+
+  .growth-crab {
+    font-size: 64px; display: block; line-height: 1;
+    transition: transform 0.3s ease;
+  }
+  .growth-crab.wiggle { animation: wiggle 0.6s ease; }
+
+  .growth-msg {
+    margin-top: 10px;
+    font-family: 'Noto Serif TC', serif;
+    font-size: 15px; font-weight: 700;
+    color: var(--text);
+    min-height: 24px;
+    transition: opacity 0.3s;
+  }
+  .growth-msg.flash { animation: flash 0.5s ease; }
+
+  .growth-stage {
+    margin-top: 6px; font-size: 11px; letter-spacing: 2px;
+    text-transform: uppercase; color: var(--text-muted);
+  }
+
+  /* Toast popup on new donation */
+  .toast {
+    position: fixed; bottom: 28px; left: 50%; transform: translateX(-50%) translateY(80px);
+    background: var(--text); color: #fff;
+    padding: 12px 22px; border-radius: 99px;
+    font-size: 14px; font-weight: 500;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.2);
+    transition: transform 0.4s cubic-bezier(0.34,1.56,0.64,1), opacity 0.4s;
+    opacity: 0; z-index: 999; white-space: nowrap;
+    pointer-events: none;
+  }
+  .toast.show { transform: translateX(-50%) translateY(0); opacity: 1; }
+
+  @keyframes wiggle {
+    0%  { transform: rotate(0deg) scale(1); }
+    20% { transform: rotate(-12deg) scale(1.15); }
+    40% { transform: rotate(12deg) scale(1.2); }
+    60% { transform: rotate(-8deg) scale(1.15); }
+    80% { transform: rotate(6deg) scale(1.1); }
+    100%{ transform: rotate(0deg) scale(1); }
+  }
+  @keyframes flash {
+    0%  { opacity:0; transform: scale(0.85); }
+    60% { opacity:1; transform: scale(1.05); }
+    100%{ opacity:1; transform: scale(1); }
+  }
+
   /* ── Total card ── */
   .total-card {
     background: var(--surface);
@@ -303,6 +361,13 @@
     <p class="sub">一起把紅蟳養得肥肥壯壯！<br>每一份贊助都讓牠們更鮮美 🌊</p>
   </header>
 
+  <!-- 紅蟳成長狀態 -->
+  <div class="growth-card">
+    <span class="growth-crab" id="growthCrab">🌊</span>
+    <div class="growth-msg" id="growthMsg">紅蟳肚子餓了...</div>
+    <div class="growth-stage" id="growthStage">階段 0／5</div>
+  </div>
+
   <!-- 累計金額 -->
   <div class="total-card">
     <div class="total-label">累計贊助金額</div>
@@ -364,6 +429,9 @@
 
 </div>
 
+<!-- Toast -->
+<div class="toast" id="toast"></div>
+
 <!-- Firebase SDK -->
 <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
@@ -390,6 +458,60 @@
   const app = initializeApp(firebaseConfig);
   const db = getDatabase(app);
   const donationsRef = ref(db, 'donations');
+
+  // 成長階段設定
+  const STAGES = [
+    { min: 0,     emoji: '🌊',  msg: '紅蟳肚子餓了...',           label: '飢餓中' },
+    { min: 1,     emoji: '🦀',  msg: '小蟹腳一隻長出來了，加油！', label: '初生' },
+    { min: 5000,  emoji: '🦀',  msg: '蟹肉 10g 出來了！',          label: '成長中' },
+    { min: 10000, emoji: '🦀',  msg: '蟹肉 15g 出來了！',          label: '茁壯中' },
+    { min: 15000, emoji: '🦀',  msg: '快了快了，再撐一下！',        label: '即將成熟' },
+    { min: 20000, emoji: '🎉',  msg: '恭喜達成！紅蟳準時開席！',   label: '大功告成' },
+  ];
+
+  const STAGE_SIZES = ['64px', '72px', '80px', '90px', '100px', '110px'];
+
+  let prevDonationCount = 0;
+
+  function getStage(total) {
+    let stage = STAGES[0];
+    for (const s of STAGES) {
+      if (total >= s.min) stage = s;
+    }
+    return stage;
+  }
+
+  function updateGrowth(total, donationCount) {
+    const stage = getStage(total);
+    const stageIdx = STAGES.indexOf(stage);
+    const crabEl = document.getElementById('growthCrab');
+    const msgEl  = document.getElementById('growthMsg');
+    const stageEl = document.getElementById('growthStage');
+
+    crabEl.textContent = stage.emoji;
+    crabEl.style.fontSize = STAGE_SIZES[stageIdx] || '64px';
+    msgEl.textContent  = stage.msg;
+    stageEl.textContent = `階段 ${stageIdx}／${STAGES.length - 1}`;
+
+    // Trigger animation on new donation
+    if (donationCount > prevDonationCount && prevDonationCount > 0) {
+      crabEl.classList.remove('wiggle');
+      msgEl.classList.remove('flash');
+      void crabEl.offsetWidth;
+      crabEl.classList.add('wiggle');
+      msgEl.classList.add('flash');
+      showToast(stage.msg);
+    }
+    prevDonationCount = donationCount;
+  }
+
+  function showToast(msg) {
+    const toast = document.getElementById('toast');
+    toast.textContent = msg;
+    toast.classList.add('show');
+    clearTimeout(toast._timer);
+    toast._timer = setTimeout(() => toast.classList.remove('show'), 3000);
+  }
 
   let prevTotal = 0;
   let allDonors = []; // for autocomplete
@@ -422,6 +544,7 @@
     renderTotal(total, Object.keys(summaryMap).length, prevTotal);
     renderLog(donations);
     renderSummary(summary);
+    updateGrowth(total, donations.length);
     prevTotal = total;
 
     document.getElementById('status').className = 'status';
