@@ -204,28 +204,6 @@
 
   /* Name autocomplete wrapper */
   .name-wrap { position: relative; }
-  .name-wrap datalist { display: none; }
-
-  /* Dropdown suggestion list */
-  .suggest-list {
-    position: absolute;
-    background: var(--surface); border: 1.5px solid var(--border);
-    border-radius: 10px; z-index: 9999; overflow: hidden;
-    box-shadow: 0 6px 20px rgba(192,57,43,0.18);
-    display: none; min-width: 200px;
-  }
-  .suggest-list.open { display: block; }
-  .suggest-item {
-    padding: 11px 14px; cursor: pointer; font-size: 14px;
-    color: var(--text); display: flex; align-items: center; gap: 10px;
-    transition: background 0.1s;
-  }
-  .suggest-item:hover { background: var(--bg2); }
-  .suggest-avatar {
-    width: 26px; height: 26px; border-radius: 50%;
-    display: flex; align-items: center; justify-content: center;
-    font-size: 12px; font-weight: 700; flex-shrink: 0;
-  }
 
   .submit-btn {
     width: 100%; padding: 15px; border: none; border-radius: 12px;
@@ -392,9 +370,8 @@
     <div class="row">
       <div class="field">
         <label>你的名字</label>
-        <div class="name-wrap">
-          <input type="text" id="nameInput" placeholder="輸入或選擇暱稱" maxlength="20" autocomplete="off">
-        </div>
+        <input type="text" id="nameInput" placeholder="輸入或選擇暱稱" maxlength="20" autocomplete="off" list="donorList">
+        <datalist id="donorList"></datalist>
       </div>
       <div class="field" style="flex:0.75">
         <label>金額（NT$）</label>
@@ -431,8 +408,6 @@
 
 <!-- Toast -->
 <div class="toast" id="toast"></div>
-<!-- Suggest dropdown -->
-<div class="suggest-list" id="suggestList"></div>
 
 <!-- Firebase SDK -->
 <script type="module">
@@ -542,6 +517,7 @@
 
     // 更新 autocomplete 名單
     allDonors = summary.map(s => s.name);
+    updateDatalist(allDonors);
 
     renderTotal(total, Object.keys(summaryMap).length, prevTotal);
     renderLog(donations);
@@ -589,60 +565,10 @@
     document.getElementById('panel-' + tab).classList.add('active');
   };
 
-  // Autocomplete
-  const nameInput = document.getElementById('nameInput');
-  const suggestList = document.getElementById('suggestList');
-
-  nameInput.addEventListener('input', () => {
-    const val = nameInput.value.trim().toLowerCase();
-    const matches = allDonors.filter(n => n.toLowerCase().includes(val) && val.length > 0);
-    if (matches.length === 0) { hideSuggest(); return; }
-    renderSuggest(matches);
-  });
-
-  nameInput.addEventListener('focus', () => {
-    const val = nameInput.value.trim().toLowerCase();
-    if (allDonors.length > 0 && val.length === 0) renderSuggest(allDonors.slice(0, 6));
-  });
-
-  document.addEventListener('click', (e) => {
-    if (!e.target.closest('.name-wrap')) hideSuggest();
-  });
-
-  window.addEventListener('scroll', () => {
-    if (suggestList.classList.contains('open')) positionSuggest();
-  }, { passive: true });
-
-  function positionSuggest() {
-    const rect = nameInput.getBoundingClientRect();
-    suggestList.style.top  = (rect.bottom + window.scrollY + 4) + 'px';
-    suggestList.style.left = (rect.left + window.scrollX) + 'px';
-    suggestList.style.width = rect.width + 'px';
-  }
-
-  function renderSuggest(names) {
-    suggestList.innerHTML = '';
-    names.forEach(name => {
-      const c = COLORS[name.charCodeAt(0) % COLORS.length];
-      const item = document.createElement('div');
-      item.className = 'suggest-item';
-      item.innerHTML = `
-        <div class="suggest-avatar" style="background:${c[0]};color:${c[1]}">${esc(name[0])}</div>
-        ${esc(name)}
-      `;
-      item.onclick = () => {
-        nameInput.value = name;
-        hideSuggest();
-        document.getElementById('amountInput').focus();
-      };
-      suggestList.appendChild(item);
-    });
-    positionSuggest();
-    suggestList.classList.add('open');
-  }
-
-  function hideSuggest() {
-    suggestList.classList.remove('open');
+  // 更新 datalist 選項
+  function updateDatalist(donors) {
+    const dl = document.getElementById('donorList');
+    dl.innerHTML = donors.map(name => `<option value="${esc(name)}">`).join('');
   }
 
   document.getElementById('amountInput').addEventListener('keydown', e => {
