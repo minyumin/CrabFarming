@@ -208,11 +208,11 @@
 
   /* Dropdown suggestion list */
   .suggest-list {
-    position: absolute; top: calc(100% + 4px); left: 0; right: 0;
+    position: fixed;
     background: var(--surface); border: 1.5px solid var(--border);
     border-radius: 10px; z-index: 9999; overflow: hidden;
-    box-shadow: 0 6px 20px rgba(192,57,43,0.12);
-    display: none;
+    box-shadow: 0 6px 20px rgba(192,57,43,0.18);
+    display: none; min-width: 200px;
   }
   .suggest-list.open { display: block; }
   .suggest-item {
@@ -608,6 +608,17 @@
     if (!e.target.closest('.name-wrap')) hideSuggest();
   });
 
+  window.addEventListener('scroll', () => {
+    if (suggestList.classList.contains('open')) positionSuggest();
+  }, { passive: true });
+
+  function positionSuggest() {
+    const rect = nameInput.getBoundingClientRect();
+    suggestList.style.top  = (rect.bottom + 4) + 'px';
+    suggestList.style.left = rect.left + 'px';
+    suggestList.style.width = rect.width + 'px';
+  }
+
   function renderSuggest(names) {
     suggestList.innerHTML = '';
     names.forEach(name => {
@@ -625,6 +636,7 @@
       };
       suggestList.appendChild(item);
     });
+    positionSuggest();
     suggestList.classList.add('open');
   }
 
