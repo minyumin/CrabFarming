@@ -208,7 +208,7 @@
 
   /* Dropdown suggestion list */
   .suggest-list {
-    position: fixed;
+    position: absolute;
     background: var(--surface); border: 1.5px solid var(--border);
     border-radius: 10px; z-index: 9999; overflow: hidden;
     box-shadow: 0 6px 20px rgba(192,57,43,0.18);
@@ -394,7 +394,6 @@
         <label>你的名字</label>
         <div class="name-wrap">
           <input type="text" id="nameInput" placeholder="輸入或選擇暱稱" maxlength="20" autocomplete="off">
-          <div class="suggest-list" id="suggestList"></div>
         </div>
       </div>
       <div class="field" style="flex:0.75">
@@ -432,6 +431,8 @@
 
 <!-- Toast -->
 <div class="toast" id="toast"></div>
+<!-- Suggest dropdown -->
+<div class="suggest-list" id="suggestList"></div>
 
 <!-- Firebase SDK -->
 <script type="module">
@@ -614,8 +615,8 @@
 
   function positionSuggest() {
     const rect = nameInput.getBoundingClientRect();
-    suggestList.style.top  = (rect.bottom + 4) + 'px';
-    suggestList.style.left = rect.left + 'px';
+    suggestList.style.top  = (rect.bottom + window.scrollY + 4) + 'px';
+    suggestList.style.left = (rect.left + window.scrollX) + 'px';
     suggestList.style.width = rect.width + 'px';
   }
 
