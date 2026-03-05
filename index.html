@@ -180,6 +180,7 @@
     border-radius: 22px; padding: 24px 22px; margin-bottom: 18px;
     box-shadow: 0 2px 12px rgba(192,57,43,0.06);
     opacity: 0; animation: fadeUp 0.5s 0.8s ease forwards;
+    position: relative;
   }
   .section-label { font-size: 11px; letter-spacing: 3px; text-transform: uppercase; color: var(--text-muted); margin-bottom: 16px; }
 
@@ -209,7 +210,7 @@
   .suggest-list {
     position: absolute; top: calc(100% + 4px); left: 0; right: 0;
     background: var(--surface); border: 1.5px solid var(--border);
-    border-radius: 10px; z-index: 100; overflow: hidden;
+    border-radius: 10px; z-index: 9999; overflow: hidden;
     box-shadow: 0 6px 20px rgba(192,57,43,0.12);
     display: none;
   }
