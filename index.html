@@ -579,7 +579,6 @@
     }
 
     const grandTotal = summary.reduce((s, d) => s + d.total, 0);
-    const maxTotal = summary[0].total; // already sorted desc
 
     // Bar colors - cycle through a warm palette
     const barColors = [
@@ -589,7 +588,7 @@
     summary.forEach((s, i) => {
       const c = COLORS[s.name.charCodeAt(0) % COLORS.length];
       const pct = grandTotal > 0 ? (s.total / grandTotal * 100).toFixed(1) : 0;
-      const barPct = maxTotal > 0 ? (s.total / maxTotal * 100) : 0;
+      const barPct = Math.min(s.total / GOAL * 100, 100);
       const barColor = barColors[i % barColors.length];
 
       const el = document.createElement('div');
