@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>紅蟳養肥計畫</title>
+    <style>
+        :root {
+            --crab-color: #e74c3c;
+        }
+        body {
+            font-family: 'Microsoft JhengHei', sans-serif;
+            background-color: #f0f4f8;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            margin: 0;
+            overflow: hidden;
+        }
+        .container {
+            text-align: center;
+            background: white;
+            padding: 30px;
+            border-radius: 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            width: 90%;
+            max-width: 500px;
+        }
+        h1 { color: #2c3e50; margin-bottom: 10px; }
+        
+        /* 紅蟳容器 */
+        #crab-stage {
+            height: 300px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            margin: 20px 0;
+        }
+        
+        /* 簡單的紅蟳圖示 (用 Emoji 模擬，也可以換成 <img>) */
+        #crab {
+            font-size: 50px; /* 初始大小 */
+            transition: all 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            cursor: pointer;
+            display: inline-block;
+        }
+
+        .stats { font-size: 1.2rem; color: #7f8c8d; margin-bottom: 20px; }
+        .progress-container {
+            width: 100%;
+            background-color: #ecf0f1;
+            border-radius: 10px;
+            height: 20px;
+            margin-bottom: 20px;
+            overflow: hidden;
+        }
+        #progress-bar {
+            width: 0%;
+            height: 100%;
+            background-color: #e74c3c;
+            transition: width 0.5s ease;
+        }
+        
+        .input-group {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+        }
+        input {
+            padding: 10px;
+            border: 2px solid #ddd;
+            border-radius: 5px;
+            width: 100px;
+            outline: none;
+        }
+        button {
+            padding: 10px 20px;
+            background-color: #e74c3c;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+        button:hover { background-color: #c0392b; }
+        
+        #message {
+            margin-top: 15px;
+            font-weight: bold;
+            color: #d35400;
+            height: 24px;
+        }
+
+        /* 慶祝動畫 */
+        @keyframes bounce {
+            0%, 100% { transform: scale(var(--s)) translateY(0); }
+            50% { transform: scale(var(--s)) translateY(-20px); }
+        }
+        .bouncing { animation: bounce 0.5s ease infinite; }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <h1>🦀 紅蟳養肥計畫</h1>
+        <p>目標金額：$<span id="target-display">20000</span></p>
+        
+        <div id="crab-stage">
+            <div id="crab">🦀</div>
+        </div>
+
+        <div class="stats">
+            目前累計：$<span id="current-amount">0</span>
+        </div>
+
+        <div class="progress-container">
+            <div id="progress-bar"></div>
+        </div>
+
+        <div id="message">紅蟳肚子餓了...</div>
+
+        <div class="input-group">
+            <input type="number" id="feed-input" placeholder="餵食金額" min="1">
+            <button onclick="feedCrab()">餵食！</button>
+        </div>
+    </div>
+
+    <script>
+        let currentAmount = 0;
+        const targetAmount = 5000; // 你可以修改目標金額
+        const crab = document.getElementById('crab');
+        const progressBar = document.getElementById('progress-bar');
+        const currentDisplay = document.getElementById('current-amount');
+        const messageDisplay = document.getElementById('message');
+
+        function feedCrab() {
+            const input = document.getElementById('feed-input');
+            const amount = parseInt(input.value);
+
+            if (isNaN(amount) || amount <= 0) {
+                alert("請輸入正確的餵食金額！");
+                return;
+            }
+
+            currentAmount += amount;
+            if (currentAmount > targetAmount) currentAmount = targetAmount;
+
+            updateUI();
+            input.value = '';
+            
+            // 餵食時的小動畫
+            crab.style.transform = `scale(${(currentAmount / targetAmount * 4) + 1}) rotate(10deg)`;
+            setTimeout(() => {
+                const scale = (currentAmount / targetAmount * 4) + 1;
+                crab.style.transform = `scale(${scale})`;
+            }, 200);
+        }
+
+        function updateUI() {
+            const percent = (currentAmount / targetAmount) * 100;
+            progressBar.style.width = percent + '%';
+            currentDisplay.innerText = currentAmount;
+
+            // 計算縮放：從 1倍 到 5倍 大
+            const scale = (percent / 25) + 1; 
+            crab.style.setProperty('--s', scale);
+            crab.style.transform = `scale(${scale})`;
+
+            // 根據進度顯示不同對話
+            if (percent === 0) {
+                messageDisplay.innerText = "紅蟳肚子餓了...";
+            } else if (percent < 100) {
+                messageDisplay.innerText = "這點錢，我只能買根薑絲... (Stage 1)";
+            } else if (percent < 200) {
+                crab.innerText = "🦂"; // 稍微長大一點的感覺
+                messageDisplay.innerText = "小蟹腳一隻長出來了，加油！ (Stage 2)";
+            } else if (percent < 300) {
+                crab.innerText = "🦀";
+                messageDisplay.innerText = "蟹肉10g出來了！ (Stage 3)";
+            } else if (percent < 400) {
+                messageDisplay.innerText = "蟹肉15g出來了！ (Final Stage)";
+            } else {
+                crab.innerText = "🍱"; // 變成食物了
+                crab.classList.add('bouncing');
+                messageDisplay.innerText = "恭喜達成！紅蟳準時開席！";
+                confetti(); // 這裡可以加灑花特效
+            }
+        }
+    </script>
+</body>
+</html>
