@@ -202,8 +202,23 @@
   input::placeholder { color: var(--text-muted); }
   input[type="number"]::-webkit-inner-spin-button { -webkit-appearance: none; }
 
-  /* Name autocomplete wrapper */
-  .name-wrap { position: relative; }
+  /* Name select + input */
+  .name-select-wrap { display: flex; flex-direction: column; gap: 6px; }
+  .name-select-wrap select {
+    background: var(--surface2); border: 1.5px solid var(--border);
+    border-radius: 10px; padding: 12px 14px; color: var(--text);
+    font-family: 'Noto Sans TC', sans-serif; font-size: 15px;
+    outline: none; width: 100%; cursor: pointer;
+    transition: border-color 0.2s, box-shadow 0.2s;
+  }
+  .name-select-wrap select:focus {
+    border-color: var(--red-bright);
+    box-shadow: 0 0 0 3px rgba(224,80,64,0.12);
+  }
+  .or-divider {
+    text-align: center; font-size: 11px; color: var(--text-muted);
+    letter-spacing: 1px;
+  }
 
   .submit-btn {
     width: 100%; padding: 15px; border: none; border-radius: 12px;
@@ -275,7 +290,33 @@
   .donor-total { font-family: 'Noto Serif TC', serif; font-size: 18px; font-weight: 700; color: var(--red-bright); }
   .donor-pct { font-size: 11px; color: var(--text-muted); margin-top: 2px; }
 
-  /* Bar chart */
+  /* Donor detail expand */
+  .donor-detail {
+    display: none; margin-top: 10px;
+    border-top: 1px solid var(--border); padding-top: 10px;
+    display: flex; flex-direction: column; gap: 6px;
+  }
+  .donor-detail.open { display: flex; }
+  .donor-detail-item {
+    display: flex; justify-content: space-between; align-items: center;
+    font-size: 13px; padding: 6px 4px;
+    border-bottom: 1px solid var(--bg2);
+    color: var(--text-mid);
+  }
+  .donor-detail-item:last-child { border-bottom: none; }
+  .donor-detail-time { color: var(--text-muted); font-size: 11px; }
+  .donor-detail-amt { font-weight: 600; color: var(--red-bright); font-size: 13px; }
+
+  .expand-btn {
+    background: none; border: none; cursor: pointer;
+    font-size: 11px; color: var(--text-muted); padding: 0;
+    display: flex; align-items: center; gap: 4px;
+    font-family: 'Noto Sans TC', sans-serif;
+    transition: color 0.15s;
+  }
+  .expand-btn:hover { color: var(--red-bright); }
+  .expand-arrow { transition: transform 0.2s; display: inline-block; }
+  .expand-btn.open .expand-arrow { transform: rotate(180deg); }
   .bar-wrap { width: 100%; height: 6px; background: var(--bg2); border-radius: 99px; overflow: hidden; border: 1px solid var(--border); }
   .bar-fill {
     height: 100%; border-radius: 99px;
@@ -367,13 +408,20 @@
   <!-- 輸入 -->
   <div class="input-card">
     <div class="section-label">加入贊助</div>
-    <div class="row">
+    <div class="row" style="margin-bottom: 14px;">
       <div class="field">
         <label>你的名字</label>
-        <input type="text" id="nameInput" placeholder="輸入或選擇暱稱" maxlength="20" autocomplete="off" list="donorList">
-        <datalist id="donorList"></datalist>
+        <select id="nameSelect" onchange="onSelectName()">
+          <option value="">── 請選擇 ──</option>
+        </select>
       </div>
-      <div class="field" style="flex:0.75">
+      <div class="field">
+        <label>手動輸入</label>
+        <input type="text" id="nameInput" placeholder="輸入暱稱" maxlength="20" autocomplete="off">
+      </div>
+    </div>
+    <div class="row" style="margin-bottom: 14px;">
+      <div class="field">
         <label>金額（NT$）</label>
         <input type="number" id="amountInput" placeholder="輸入金額" min="1">
       </div>
@@ -521,7 +569,7 @@
 
     renderTotal(total, Object.keys(summaryMap).length, prevTotal);
     renderLog(donations);
-    renderSummary(summary);
+    renderSummary(summary, donations);
     updateGrowth(total, donations.length);
     prevTotal = total;
 
@@ -564,11 +612,28 @@
     document.getElementById('panel-' + tab).classList.add('active');
   };
 
-  // 更新 datalist 選項
+  // 更新下拉選單選項
   function updateDatalist(donors) {
-    const dl = document.getElementById('donorList');
-    dl.innerHTML = donors.map(name => `<option value="${esc(name)}">`).join('');
+    const sel = document.getElementById('nameSelect');
+    const current = sel.value;
+    sel.innerHTML = '<option value="">── 選擇曾贊助的名字 ──</option>';
+    donors.forEach(name => {
+      const opt = document.createElement('option');
+      opt.value = name;
+      opt.textContent = name;
+      sel.appendChild(opt);
+    });
+    if (current) sel.value = current;
   }
+
+  // 選下拉後自動填入文字欄
+  window.onSelectName = function() {
+    const sel = document.getElementById('nameSelect');
+    if (sel.value) {
+      document.getElementById('nameInput').value = sel.value;
+      document.getElementById('amountInput').focus();
+    }
+  };
 
   document.getElementById('amountInput').addEventListener('keydown', e => {
     if (e.key === 'Enter') window.addDonation();
@@ -631,7 +696,7 @@
     });
   }
 
-  function renderSummary(summary) {
+  function renderSummary(summary, allDonations) {
     const panel = document.getElementById('panel-summary');
     panel.innerHTML = '';
 
@@ -641,17 +706,33 @@
     }
 
     const grandTotal = summary.reduce((s, d) => s + d.total, 0);
+    const barColors = ['#e05040','#d4692a','#c08020','#2a8060','#4060c0','#8040a0'];
 
-    // Bar colors - cycle through a warm palette
-    const barColors = [
-      '#e05040', '#d4692a', '#c08020', '#2a8060', '#4060c0', '#8040a0'
-    ];
+    // 建立每個人的明細 map
+    const detailMap = {};
+    allDonations.forEach(d => {
+      if (!detailMap[d.name]) detailMap[d.name] = [];
+      detailMap[d.name].push(d);
+    });
 
     summary.forEach((s, i) => {
       const c = COLORS[s.name.charCodeAt(0) % COLORS.length];
       const pct = grandTotal > 0 ? (s.total / grandTotal * 100).toFixed(1) : 0;
       const barPct = Math.min(s.total / GOAL * 100, 100);
       const barColor = barColors[i % barColors.length];
+      const details = (detailMap[s.name] || []).sort((a,b) => b.timestamp - a.timestamp);
+
+      // 明細 HTML
+      const detailRows = details.map(d => {
+        const time = d.timestamp
+          ? new Date(d.timestamp).toLocaleString('zh-TW', { month:'2-digit', day:'2-digit', hour:'2-digit', minute:'2-digit' })
+          : '--';
+        return `
+          <div class="donor-detail-item">
+            <span class="donor-detail-time">${time}</span>
+            <span class="donor-detail-amt">NT$ ${Number(d.amount).toLocaleString()}</span>
+          </div>`;
+      }).join('');
 
       const el = document.createElement('div');
       el.className = 'donor-item';
@@ -661,7 +742,9 @@
             <div class="avatar" style="background:${c[0]};color:${c[1]}">${esc(s.name[0])}</div>
             <div>
               <div class="donor-name">${esc(s.name)}</div>
-              <div class="donor-times">共贊助 ${s.count} 次</div>
+              <button class="expand-btn" id="btn-${i}" onclick="toggleDetail(${i})">
+                共贊助 ${s.count} 次 <span class="expand-arrow">▼</span>
+              </button>
             </div>
           </div>
           <div class="donor-right">
@@ -672,17 +755,27 @@
         <div class="bar-wrap">
           <div class="bar-fill" style="background:${barColor}" data-width="${barPct}"></div>
         </div>
+        <div class="donor-detail" id="detail-${i}">
+          ${detailRows}
+        </div>
       `;
       panel.appendChild(el);
     });
 
-    // Animate bars after render
     requestAnimationFrame(() => {
       panel.querySelectorAll('.bar-fill').forEach(bar => {
         bar.style.width = bar.dataset.width + '%';
       });
     });
   }
+
+  window.toggleDetail = function(i) {
+    const detail = document.getElementById('detail-' + i);
+    const btn = document.getElementById('btn-' + i);
+    const isOpen = detail.classList.contains('open');
+    detail.classList.toggle('open', !isOpen);
+    btn.classList.toggle('open', !isOpen);
+  };
 
   function shake(id) {
     const el = document.getElementById(id);
